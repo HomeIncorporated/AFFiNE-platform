@@ -9,6 +9,7 @@ import { QuotaManagementService, QuotaModule } from '../src/core/quota';
 import { ConfigModule } from '../src/fundamentals/config';
 import { CopilotModule } from '../src/plugins/copilot';
 import { PromptService } from '../src/plugins/copilot/prompt';
+import { ChatSessionService } from '../src/plugins/copilot/session';
 import { createTestingModule } from './utils';
 
 const test = ava as TestFn<{
@@ -16,6 +17,7 @@ const test = ava as TestFn<{
   quotaManager: QuotaManagementService;
   module: TestingModule;
   prompt: PromptService;
+  session: ChatSessionService;
 }>;
 
 test.beforeEach(async t => {
@@ -38,23 +40,35 @@ test.beforeEach(async t => {
   const quotaManager = module.get(QuotaManagementService);
   const auth = module.get(AuthService);
   const prompt = module.get(PromptService);
+  const session = module.get(ChatSessionService);
 
   t.context.module = module;
   t.context.quotaManager = quotaManager;
   t.context.auth = auth;
   t.context.prompt = prompt;
+  t.context.session = session;
 });
 
 test.afterEach.always(async t => {
   await t.context.module.close();
 });
 
+let userId: string;
+test.beforeEach(async t => {
+  const { auth } = t.context;
+  await auth.signUp('test', 'darksky@affine.pro', '123456');
+  const user = await auth.signIn('darksky@affine.pro', '123456');
+  userId = user.id;
+});
+
+// ==================== prompt ====================
+
 test('should be able to manage prompt', async t => {
   const { prompt } = t.context;
 
   t.is((await prompt.list()).length, 0, 'should have no prompt');
 
-  await prompt.set('test', [
+  await prompt.set('test', 'test', [
     { role: 'system', content: 'hello' },
     { role: 'user', content: 'hello' },
   ]);
@@ -91,7 +105,7 @@ test('should be able to render prompt', async t => {
     content: 'hello world',
   };
 
-  await prompt.set('test', [msg]);
+  await prompt.set('test', 'test', [msg]);
   const testPrompt = await prompt.get('test');
   t.assert(testPrompt, 'should have prompt');
   t.is(
@@ -121,12 +135,67 @@ test('should be able to render listed prompt', async t => {
     links: ['https://affine.pro', 'https://github.com/toeverything/affine'],
   };
 
-  await prompt.set('test', [msg]);
+  await prompt.set('test', 'test', [msg]);
   const testPrompt = await prompt.get('test');
 
   t.is(
     testPrompt?.finish(params).pop()?.content,
     'links:\n- https://affine.pro\n- https://github.com/toeverything/affine\n',
     'should render the prompt'
+  );
+});
+
+// ==================== session ====================
+
+test('should be able to manage chat session', async t => {
+  const { prompt, session } = t.context;
+
+  await prompt.set('prompt', 'model', [
+    { role: 'system', content: 'hello {{word}}' },
+  ]);
+
+  const sessionId = await session.create({
+    docId: 'test',
+    workspaceId: 'test',
+    userId,
+    promptName: 'prompt',
+  });
+  t.truthy(sessionId, 'should create session');
+
+  const s = (await session.get(sessionId))!;
+  t.is(s.config.sessionId, sessionId, 'should get session');
+  t.is(s.config.promptName, 'prompt', 'should have prompt name');
+  t.is(s.model, 'model', 'should have model');
+
+  const params = { word: 'world' };
+
+  s.push({ role: 'user', content: 'hello', createdAt: new Date() });
+  // @ts-expect-error
+  const finalMessages = s.finish(params).map(({ createdAt: _, ...m }) => m);
+  t.deepEqual(
+    finalMessages,
+    [
+      { content: 'hello world', params, role: 'system' },
+      { content: 'hello', role: 'user' },
+    ],
+    'should generate the final message'
+  );
+  await s.save();
+
+  const s1 = (await session.get(sessionId))!;
+  t.deepEqual(
+    // @ts-expect-error
+    s1.finish(params).map(({ createdAt: _, ...m }) => m),
+    finalMessages,
+    'should same as before message'
+  );
+  t.deepEqual(
+    // @ts-expect-error
+    s1.finish({}).map(({ createdAt: _, ...m }) => m),
+    [
+      { content: 'hello ', params: {}, role: 'system' },
+      { content: 'hello', role: 'user' },
+    ],
+    'should generate different message with another params'
   );
 });

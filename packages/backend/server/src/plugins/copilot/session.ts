@@ -81,7 +81,7 @@ export class ChatSession implements AsyncDisposable {
   }
 
   pop() {
-    this.state.messages.pop();
+    return this.state.messages.pop();
   }
 
   private takeMessages(): ChatMessage[] {

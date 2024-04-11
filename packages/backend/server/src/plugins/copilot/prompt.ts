@@ -179,11 +179,12 @@ export class PromptService {
     return null;
   }
 
-  async set(name: string, messages: PromptMessage[]) {
+  async set(name: string, model: string, messages: PromptMessage[]) {
     return await this.db.aiPrompt
       .create({
         data: {
           name,
+          model,
           messages: {
             create: messages.map((m, idx) => ({
               idx,
