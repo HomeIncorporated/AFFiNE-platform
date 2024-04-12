@@ -114,7 +114,7 @@ export class ChatSession implements AsyncDisposable {
       ...this.state.prompt.finish(
         Object.keys(params).length ? params : messages[0]?.params || {}
       ),
-      ...messages.filter(m => m.content || m.attachments?.length),
+      ...messages.filter(m => m.content?.trim() || m.attachments?.length),
     ];
   }
 

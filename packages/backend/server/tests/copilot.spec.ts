@@ -240,3 +240,82 @@ test('should be able to process message id', async t => {
     'should throw error if push by invalid message id'
   );
 });
+
+test('should be able to generate with message id', async t => {
+  const { prompt, session } = t.context;
+
+  await prompt.set('prompt', 'model', [
+    { role: 'system', content: 'hello {{word}}' },
+  ]);
+
+  // text message
+  {
+    const sessionId = await session.create({
+      docId: 'test',
+      workspaceId: 'test',
+      userId,
+      promptName: 'prompt',
+    });
+    const s = (await session.get(sessionId))!;
+
+    const message = (await session.createMessage({
+      sessionId,
+      content: 'hello',
+    }))!;
+
+    await s.pushByMessageId(message);
+    const finalMessages = s
+      .finish({ word: 'world' })
+      .map(({ content }) => content);
+    t.deepEqual(finalMessages, ['hello world', 'hello']);
+  }
+
+  // attachment message
+  {
+    const sessionId = await session.create({
+      docId: 'test',
+      workspaceId: 'test',
+      userId,
+      promptName: 'prompt',
+    });
+    const s = (await session.get(sessionId))!;
+
+    const message = (await session.createMessage({
+      sessionId,
+      attachments: ['https://affine.pro/example.jpg'],
+    }))!;
+
+    await s.pushByMessageId(message);
+    const finalMessages = s
+      .finish({ word: 'world' })
+      .map(({ attachments }) => attachments);
+    t.deepEqual(finalMessages, [
+      // system prompt
+      undefined,
+      // user prompt
+      ['https://affine.pro/example.jpg'],
+    ]);
+  }
+
+  // empty message
+  {
+    const sessionId = await session.create({
+      docId: 'test',
+      workspaceId: 'test',
+      userId,
+      promptName: 'prompt',
+    });
+    const s = (await session.get(sessionId))!;
+
+    const message = (await session.createMessage({
+      sessionId,
+    }))!;
+
+    await s.pushByMessageId(message);
+    const finalMessages = s
+      .finish({ word: 'world' })
+      .map(({ content }) => content);
+    // empty message should be filtered
+    t.deepEqual(finalMessages, ['hello world']);
+  }
+});
