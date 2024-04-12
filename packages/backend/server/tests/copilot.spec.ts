@@ -199,3 +199,44 @@ test('should be able to manage chat session', async t => {
     'should generate different message with another params'
   );
 });
+
+test('should be able to process message id', async t => {
+  const { prompt, session } = t.context;
+
+  await prompt.set('prompt', 'model', [
+    { role: 'system', content: 'hello {{word}}' },
+  ]);
+
+  const sessionId = await session.create({
+    docId: 'test',
+    workspaceId: 'test',
+    userId,
+    promptName: 'prompt',
+  });
+  const s = (await session.get(sessionId))!;
+
+  const textMessage = (await session.createMessage({
+    sessionId,
+    content: 'hello',
+  }))!;
+  const anotherSessionMessage = (await session.createMessage({
+    sessionId: 'another-session-id',
+  }))!;
+
+  await t.notThrowsAsync(
+    s.pushByMessageId(textMessage),
+    'should push by message id'
+  );
+  await t.throwsAsync(
+    s.pushByMessageId(anotherSessionMessage),
+    {
+      instanceOf: Error,
+    },
+    'should throw error if push by another session message id'
+  );
+  await t.throwsAsync(
+    s.pushByMessageId('invalid'),
+    { instanceOf: Error },
+    'should throw error if push by invalid message id'
+  );
+});
