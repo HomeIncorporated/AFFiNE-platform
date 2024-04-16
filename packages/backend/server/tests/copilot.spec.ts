@@ -9,7 +9,9 @@ import { QuotaManagementService, QuotaModule } from '../src/core/quota';
 import { ConfigModule } from '../src/fundamentals/config';
 import { CopilotModule } from '../src/plugins/copilot';
 import { PromptService } from '../src/plugins/copilot/prompt';
+import { CopilotProviderService } from '../src/plugins/copilot/providers';
 import { ChatSessionService } from '../src/plugins/copilot/session';
+import { CopilotCapability } from '../src/plugins/copilot/types';
 import { createTestingModule } from './utils';
 
 const test = ava as TestFn<{
@@ -17,6 +19,7 @@ const test = ava as TestFn<{
   quotaManager: QuotaManagementService;
   module: TestingModule;
   prompt: PromptService;
+  provider: CopilotProviderService;
   session: ChatSessionService;
 }>;
 
@@ -40,12 +43,14 @@ test.beforeEach(async t => {
   const quotaManager = module.get(QuotaManagementService);
   const auth = module.get(AuthService);
   const prompt = module.get(PromptService);
+  const provider = module.get(CopilotProviderService);
   const session = module.get(ChatSessionService);
 
   t.context.module = module;
   t.context.quotaManager = quotaManager;
   t.context.auth = auth;
   t.context.prompt = prompt;
+  t.context.provider = provider;
   t.context.session = session;
 });
 
@@ -317,5 +322,72 @@ test('should be able to generate with message id', async t => {
       .map(({ content }) => content);
     // empty message should be filtered
     t.deepEqual(finalMessages, ['hello world']);
+  }
+});
+
+// ==================== provider ====================
+
+test.only('should be able to get provider', async t => {
+  const { provider } = t.context;
+
+  {
+    const p = provider.getProviderByCapability(CopilotCapability.TextToText);
+    t.is(
+      p?.type.toString(),
+      'openai',
+      'should get provider support text-to-text'
+    );
+  }
+
+  {
+    const p = provider.getProviderByCapability(
+      CopilotCapability.TextToEmbedding
+    );
+    t.is(
+      p?.type.toString(),
+      'openai',
+      'should get provider support text-to-embedding'
+    );
+  }
+
+  {
+    const p = provider.getProviderByCapability(CopilotCapability.TextToImage);
+    t.is(
+      p?.type.toString(),
+      'fal',
+      'should get provider support text-to-image'
+    );
+  }
+
+  {
+    const p = provider.getProviderByCapability(CopilotCapability.ImageToImage);
+    t.is(
+      p?.type.toString(),
+      'fal',
+      'should get provider support image-to-image'
+    );
+  }
+
+  {
+    const p = provider.getProviderByCapability(CopilotCapability.ImageToText);
+    t.is(
+      p?.type.toString(),
+      'openai',
+      'should get provider support image-to-text'
+    );
+  }
+
+  // text-to-image use fal by default, but this case can use
+  // model dall-e-3 to select openai provider
+  {
+    const p = provider.getProviderByCapability(
+      CopilotCapability.TextToImage,
+      'dall-e-3'
+    );
+    t.is(
+      p?.type.toString(),
+      'openai',
+      'should get provider support text-to-image and model'
+    );
   }
 });

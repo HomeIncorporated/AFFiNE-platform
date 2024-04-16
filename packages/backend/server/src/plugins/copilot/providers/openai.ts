@@ -59,6 +59,10 @@ export class OpenAIProvider
     return !!config.apiKey;
   }
 
+  get type(): CopilotProviderType {
+    return OpenAIProvider.type;
+  }
+
   getCapabilities(): CopilotCapability[] {
     return OpenAIProvider.capabilities;
   }
