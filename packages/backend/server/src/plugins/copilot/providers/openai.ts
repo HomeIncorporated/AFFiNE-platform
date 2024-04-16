@@ -5,6 +5,7 @@ import { ClientOptions, OpenAI } from 'openai';
 import {
   ChatMessageRole,
   CopilotCapability,
+  CopilotImageToImageProvider,
   CopilotImageToTextProvider,
   CopilotProviderType,
   CopilotTextToEmbeddingProvider,
@@ -13,7 +14,7 @@ import {
   PromptMessage,
 } from '../types';
 
-const DEFAULT_DIMENSIONS = 256;
+export const DEFAULT_DIMENSIONS = 256;
 
 const SIMPLE_IMAGE_URL_REGEX = /^(https?:\/\/|data:image\/)/;
 
@@ -22,6 +23,7 @@ export class OpenAIProvider
     CopilotTextToTextProvider,
     CopilotTextToEmbeddingProvider,
     CopilotTextToImageProvider,
+    CopilotImageToImageProvider,
     CopilotImageToTextProvider
 {
   static readonly type = CopilotProviderType.OpenAI;
@@ -29,6 +31,7 @@ export class OpenAIProvider
     CopilotCapability.TextToText,
     CopilotCapability.TextToEmbedding,
     CopilotCapability.TextToImage,
+    CopilotCapability.ImageToImage,
     CopilotCapability.ImageToText,
   ];
 
@@ -71,7 +74,7 @@ export class OpenAIProvider
     return this.availableModels.includes(model);
   }
 
-  private chatToGPTMessage(
+  protected chatToGPTMessage(
     messages: PromptMessage[]
   ): OpenAI.Chat.Completions.ChatCompletionMessageParam[] {
     // filter redundant fields
@@ -96,7 +99,7 @@ export class OpenAIProvider
     });
   }
 
-  private checkParams({
+  protected checkParams({
     messages,
     embeddings,
     model,

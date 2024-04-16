@@ -9,10 +9,14 @@ import { QuotaManagementService, QuotaModule } from '../src/core/quota';
 import { ConfigModule } from '../src/fundamentals/config';
 import { CopilotModule } from '../src/plugins/copilot';
 import { PromptService } from '../src/plugins/copilot/prompt';
-import { CopilotProviderService } from '../src/plugins/copilot/providers';
+import {
+  CopilotProviderService,
+  registerCopilotProvider,
+} from '../src/plugins/copilot/providers';
 import { ChatSessionService } from '../src/plugins/copilot/session';
 import { CopilotCapability } from '../src/plugins/copilot/types';
 import { createTestingModule } from './utils';
+import { TestProvider } from './utils/copilot';
 
 const test = ava as TestFn<{
   auth: AuthService;
@@ -327,7 +331,7 @@ test('should be able to generate with message id', async t => {
 
 // ==================== provider ====================
 
-test.only('should be able to get provider', async t => {
+test('should be able to get provider', async t => {
   const { provider } = t.context;
 
   {
@@ -389,5 +393,50 @@ test.only('should be able to get provider', async t => {
       'openai',
       'should get provider support text-to-image and model'
     );
+  }
+});
+
+test.only('should be able to register test provider', async t => {
+  const { provider } = t.context;
+  registerCopilotProvider(TestProvider);
+
+  {
+    const p = provider.getProviderByCapability(
+      CopilotCapability.TextToText,
+      'test'
+    );
+    t.is(p?.type.toString(), 'test', 'should get test provider');
+  }
+
+  {
+    const p = provider.getProviderByCapability(
+      CopilotCapability.TextToEmbedding,
+      'test'
+    );
+    t.is(p?.type.toString(), 'test', 'should get test provider');
+  }
+
+  {
+    const p = provider.getProviderByCapability(
+      CopilotCapability.TextToImage,
+      'test'
+    );
+    t.is(p?.type.toString(), 'test', 'should get test provider');
+  }
+
+  {
+    const p = provider.getProviderByCapability(
+      CopilotCapability.ImageToImage,
+      'test'
+    );
+    t.is(p?.type.toString(), 'test', 'should get test provider');
+  }
+
+  {
+    const p = provider.getProviderByCapability(
+      CopilotCapability.ImageToText,
+      'test'
+    );
+    t.is(p?.type.toString(), 'test', 'should get test provider');
   }
 });

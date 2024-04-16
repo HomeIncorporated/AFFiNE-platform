@@ -130,6 +130,8 @@ export type ListHistoriesOptions = {
 export enum CopilotProviderType {
   FAL = 'fal',
   OpenAI = 'openai',
+  // only for test
+  Test = 'test',
 }
 
 export enum CopilotCapability {
