@@ -1,5 +1,8 @@
 import { randomBytes } from 'node:crypto';
 
+import { INestApplication } from '@nestjs/common';
+import request from 'supertest';
+
 import {
   DEFAULT_DIMENSIONS,
   OpenAIProvider,
@@ -13,6 +16,7 @@ import {
   CopilotTextToTextProvider,
   PromptMessage,
 } from '../../src/plugins/copilot/types';
+import { gql } from './common';
 
 export class TestProvider
   extends OpenAIProvider
@@ -120,4 +124,28 @@ export class TestProvider
       yield url;
     }
   }
+}
+
+export async function createCopilotSession(
+  app: INestApplication,
+  userToken: string,
+  workspaceId: string,
+  docId: string,
+  promptName: string
+): Promise<string> {
+  const res = await request(app.getHttpServer())
+    .post(gql)
+    .auth(userToken, { type: 'bearer' })
+    .set({ 'x-request-id': 'test', 'x-operation-name': 'test' })
+    .send({
+      query: `
+        mutation createCopilotSession($options: CreateChatSessionInput!) {
+          createCopilotSession(options: $options)
+        }
+      `,
+      variables: { options: { workspaceId, docId, promptName } },
+    })
+    .expect(200);
+
+  return res.body.data.createCopilotSession;
 }
