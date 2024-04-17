@@ -5,7 +5,7 @@ import type { TestFn } from 'ava';
 import ava from 'ava';
 
 import { AuthService } from '../src/core/auth';
-import { QuotaManagementService, QuotaModule } from '../src/core/quota';
+import { QuotaModule } from '../src/core/quota';
 import { ConfigModule } from '../src/fundamentals/config';
 import { CopilotModule } from '../src/plugins/copilot';
 import { PromptService } from '../src/plugins/copilot/prompt';
@@ -14,13 +14,15 @@ import {
   registerCopilotProvider,
 } from '../src/plugins/copilot/providers';
 import { ChatSessionService } from '../src/plugins/copilot/session';
-import { CopilotCapability } from '../src/plugins/copilot/types';
+import {
+  CopilotCapability,
+  CopilotProviderType,
+} from '../src/plugins/copilot/types';
 import { createTestingModule } from './utils';
 import { TestProvider } from './utils/copilot';
 
 const test = ava as TestFn<{
   auth: AuthService;
-  quotaManager: QuotaManagementService;
   module: TestingModule;
   prompt: PromptService;
   provider: CopilotProviderService;
@@ -44,14 +46,12 @@ test.beforeEach(async t => {
     ],
   });
 
-  const quotaManager = module.get(QuotaManagementService);
   const auth = module.get(AuthService);
   const prompt = module.get(PromptService);
   const provider = module.get(CopilotProviderService);
   const session = module.get(ChatSessionService);
 
   t.context.module = module;
-  t.context.quotaManager = quotaManager;
   t.context.auth = auth;
   t.context.prompt = prompt;
   t.context.provider = provider;
@@ -65,8 +65,7 @@ test.afterEach.always(async t => {
 let userId: string;
 test.beforeEach(async t => {
   const { auth } = t.context;
-  await auth.signUp('test', 'darksky@affine.pro', '123456');
-  const user = await auth.signIn('darksky@affine.pro', '123456');
+  const user = await auth.signUp('test', 'darksky@affine.pro', '123456');
   userId = user.id;
 });
 
@@ -396,47 +395,18 @@ test('should be able to get provider', async t => {
   }
 });
 
-test.only('should be able to register test provider', async t => {
+test('should be able to register test provider', async t => {
   const { provider } = t.context;
   registerCopilotProvider(TestProvider);
 
-  {
-    const p = provider.getProviderByCapability(
-      CopilotCapability.TextToText,
-      'test'
-    );
-    t.is(p?.type.toString(), 'test', 'should get test provider');
-  }
+  const assertProvider = (cap: CopilotCapability) => {
+    const p = provider.getProviderByCapability(cap, 'test');
+    t.is(p?.type, CopilotProviderType.Test, 'should get test provider');
+  };
 
-  {
-    const p = provider.getProviderByCapability(
-      CopilotCapability.TextToEmbedding,
-      'test'
-    );
-    t.is(p?.type.toString(), 'test', 'should get test provider');
-  }
-
-  {
-    const p = provider.getProviderByCapability(
-      CopilotCapability.TextToImage,
-      'test'
-    );
-    t.is(p?.type.toString(), 'test', 'should get test provider');
-  }
-
-  {
-    const p = provider.getProviderByCapability(
-      CopilotCapability.ImageToImage,
-      'test'
-    );
-    t.is(p?.type.toString(), 'test', 'should get test provider');
-  }
-
-  {
-    const p = provider.getProviderByCapability(
-      CopilotCapability.ImageToText,
-      'test'
-    );
-    t.is(p?.type.toString(), 'test', 'should get test provider');
-  }
+  assertProvider(CopilotCapability.TextToText);
+  assertProvider(CopilotCapability.TextToEmbedding);
+  assertProvider(CopilotCapability.TextToImage);
+  assertProvider(CopilotCapability.ImageToImage);
+  assertProvider(CopilotCapability.ImageToText);
 });
