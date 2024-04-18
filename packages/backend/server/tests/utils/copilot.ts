@@ -17,6 +17,7 @@ import {
   PromptMessage,
 } from '../../src/plugins/copilot/types';
 import { gql } from './common';
+import { handleGraphQLError } from './utils';
 
 export class TestProvider
   extends OpenAIProvider
@@ -147,5 +148,37 @@ export async function createCopilotSession(
     })
     .expect(200);
 
+  handleGraphQLError(res);
+
   return res.body.data.createCopilotSession;
+}
+
+export async function createCopilotMessage(
+  app: INestApplication,
+  userToken: string,
+  sessionId: string,
+  content?: string,
+  attachments?: string[],
+  blobs?: ArrayBuffer[],
+  params?: Record<string, string>
+): Promise<string> {
+  const res = await request(app.getHttpServer())
+    .post(gql)
+    .auth(userToken, { type: 'bearer' })
+    .set({ 'x-request-id': 'test', 'x-operation-name': 'test' })
+    .send({
+      query: `
+        mutation createCopilotMessage($options: CreateChatMessageInput!) {
+          createCopilotMessage(options: $options)
+        }
+      `,
+      variables: {
+        options: { sessionId, content, attachments, blobs, params },
+      },
+    })
+    .expect(200);
+
+  handleGraphQLError(res);
+
+  return res.body.data.createCopilotMessage;
 }

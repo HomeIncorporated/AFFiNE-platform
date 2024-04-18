@@ -16,7 +16,11 @@ import {
 } from '../src/plugins/copilot/providers';
 import { ChatSessionService } from '../src/plugins/copilot/session';
 import { createTestingApp, createWorkspace, signUp } from './utils';
-import { createCopilotSession, TestProvider } from './utils/copilot';
+import {
+  createCopilotMessage,
+  createCopilotSession,
+  TestProvider,
+} from './utils/copilot';
 
 const test = ava as TestFn<{
   auth: AuthService;
@@ -70,12 +74,12 @@ test.afterEach.always(async t => {
 
 // ==================== session ====================
 
-test.only('should be able to create session', async t => {
+test('should be able to create session', async t => {
   const { app } = t.context;
 
   const assertCreateSession = async (
     workspaceId: string,
-    error = 'failed to create session',
+    error: string,
     asserter = async (x: any) => {
       t.truthy(await x, error);
     }
@@ -115,7 +119,7 @@ test.only('should be able to create session', async t => {
   }
 });
 
-test.only('should be able to use test provider', async t => {
+test('should be able to use test provider', async t => {
   const { app } = t.context;
 
   const { id } = await createWorkspace(app, token);
@@ -123,4 +127,31 @@ test.only('should be able to use test provider', async t => {
     await createCopilotSession(app, token, id, randomUUID(), promptName),
     'failed to create session'
   );
+});
+
+// ==================== message ====================
+
+test('should be able to create message', async t => {
+  const { app } = t.context;
+
+  {
+    const { id } = await createWorkspace(app, token);
+    const sessionId = await createCopilotSession(
+      app,
+      token,
+      id,
+      randomUUID(),
+      promptName
+    );
+    const messageId = await createCopilotMessage(app, token, sessionId);
+    t.truthy(messageId, 'failed to create message');
+  }
+
+  {
+    await t.throwsAsync(
+      createCopilotMessage(app, token, randomUUID()),
+      { instanceOf: Error },
+      'should not able to create message with invalid session'
+    );
+  }
 });
