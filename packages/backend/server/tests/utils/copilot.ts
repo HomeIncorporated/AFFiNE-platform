@@ -182,3 +182,48 @@ export async function createCopilotMessage(
 
   return res.body.data.createCopilotMessage;
 }
+
+export async function chatWithText(
+  app: INestApplication,
+  userToken: string,
+  sessionId: string,
+  messageId: string,
+  prefix = ''
+): Promise<string> {
+  const res = await request(app.getHttpServer())
+    .get(`/api/copilot/chat/${sessionId}${prefix}?messageId=${messageId}`)
+    .auth(userToken, { type: 'bearer' })
+    .expect(200);
+
+  return res.text;
+}
+
+export async function chatWithTextStream(
+  app: INestApplication,
+  userToken: string,
+  sessionId: string,
+  messageId: string
+) {
+  return chatWithText(app, userToken, sessionId, messageId, '/stream');
+}
+
+export async function chatWithImages(
+  app: INestApplication,
+  userToken: string,
+  sessionId: string,
+  messageId: string
+) {
+  return chatWithText(app, userToken, sessionId, messageId, '/images');
+}
+
+export function textToEventStream(
+  content: string | string[],
+  id: string,
+  event = 'message'
+): string {
+  return (
+    Array.from(content)
+      .map(x => `\nevent: ${event}\nid: ${id}\ndata: ${x}`)
+      .join('\n') + '\n\n'
+  );
+}

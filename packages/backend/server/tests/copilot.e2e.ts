@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { INestApplication } from '@nestjs/common';
 import type { TestFn } from 'ava';
 import ava from 'ava';
+import Sinon from 'sinon';
 
 import { AppModule } from '../src/app.module';
 import { AuthService } from '../src/core/auth';
@@ -14,12 +15,16 @@ import {
   CopilotProviderService,
   registerCopilotProvider,
 } from '../src/plugins/copilot/providers';
-import { ChatSessionService } from '../src/plugins/copilot/session';
+import { CopilotStorage } from '../src/plugins/copilot/storage';
 import { createTestingApp, createWorkspace, signUp } from './utils';
 import {
+  chatWithImages,
+  chatWithText,
+  chatWithTextStream,
   createCopilotMessage,
   createCopilotSession,
   TestProvider,
+  textToEventStream,
 } from './utils/copilot';
 
 const test = ava as TestFn<{
@@ -27,7 +32,7 @@ const test = ava as TestFn<{
   app: INestApplication;
   prompt: PromptService;
   provider: CopilotProviderService;
-  session: ChatSessionService;
+  storage: CopilotStorage;
 }>;
 
 test.beforeEach(async t => {
@@ -48,10 +53,12 @@ test.beforeEach(async t => {
 
   const auth = app.get(AuthService);
   const prompt = app.get(PromptService);
+  const storage = app.get(CopilotStorage);
 
   t.context.app = app;
   t.context.auth = auth;
   t.context.prompt = prompt;
+  t.context.storage = storage;
 });
 
 let token: string;
@@ -74,7 +81,7 @@ test.afterEach.always(async t => {
 
 // ==================== session ====================
 
-test('should be able to create session', async t => {
+test('should create session correctly', async t => {
   const { app } = t.context;
 
   const assertCreateSession = async (
@@ -131,7 +138,7 @@ test('should be able to use test provider', async t => {
 
 // ==================== message ====================
 
-test('should be able to create message', async t => {
+test('should create message correctly', async t => {
   const { app } = t.context;
 
   {
@@ -144,7 +151,7 @@ test('should be able to create message', async t => {
       promptName
     );
     const messageId = await createCopilotMessage(app, token, sessionId);
-    t.truthy(messageId, 'failed to create message');
+    t.truthy(messageId, 'should be able to create message with valid session');
   }
 
   {
@@ -154,4 +161,46 @@ test('should be able to create message', async t => {
       'should not able to create message with invalid session'
     );
   }
+});
+
+// ==================== chat ====================
+
+test.only('should be able to chat with api', async t => {
+  const { app, storage } = t.context;
+
+  Sinon.stub(storage, 'handleRemoteLink').resolvesArg(2);
+
+  {
+    const { id } = await createWorkspace(app, token);
+    const sessionId = await createCopilotSession(
+      app,
+      token,
+      id,
+      randomUUID(),
+      promptName
+    );
+    const messageId = await createCopilotMessage(app, token, sessionId);
+    const ret = await chatWithText(app, token, sessionId, messageId);
+    t.is(ret, 'generate text to text', 'should be able to chat with text');
+
+    const ret2 = await chatWithTextStream(app, token, sessionId, messageId);
+    t.is(
+      ret2,
+      textToEventStream('generate text to text stream', sessionId),
+      'should be able to chat with text stream'
+    );
+
+    const ret3 = await chatWithImages(app, token, sessionId, messageId);
+    t.is(
+      ret3,
+      textToEventStream(
+        ['https://example.com/image.jpg'],
+        sessionId,
+        'attachment'
+      ),
+      'should be able to chat with images'
+    );
+  }
+
+  Sinon.restore();
 });
