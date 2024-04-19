@@ -165,42 +165,70 @@ test('should create message correctly', async t => {
 
 // ==================== chat ====================
 
-test.only('should be able to chat with api', async t => {
+test('should be able to chat with api', async t => {
   const { app, storage } = t.context;
 
   Sinon.stub(storage, 'handleRemoteLink').resolvesArg(2);
 
-  {
-    const { id } = await createWorkspace(app, token);
-    const sessionId = await createCopilotSession(
-      app,
-      token,
-      id,
-      randomUUID(),
-      promptName
-    );
-    const messageId = await createCopilotMessage(app, token, sessionId);
-    const ret = await chatWithText(app, token, sessionId, messageId);
-    t.is(ret, 'generate text to text', 'should be able to chat with text');
+  const { id } = await createWorkspace(app, token);
+  const sessionId = await createCopilotSession(
+    app,
+    token,
+    id,
+    randomUUID(),
+    promptName
+  );
+  const messageId = await createCopilotMessage(app, token, sessionId);
+  const ret = await chatWithText(app, token, sessionId, messageId);
+  t.is(ret, 'generate text to text', 'should be able to chat with text');
 
-    const ret2 = await chatWithTextStream(app, token, sessionId, messageId);
-    t.is(
-      ret2,
-      textToEventStream('generate text to text stream', sessionId),
-      'should be able to chat with text stream'
-    );
+  const ret2 = await chatWithTextStream(app, token, sessionId, messageId);
+  t.is(
+    ret2,
+    textToEventStream('generate text to text stream', sessionId),
+    'should be able to chat with text stream'
+  );
 
-    const ret3 = await chatWithImages(app, token, sessionId, messageId);
-    t.is(
-      ret3,
-      textToEventStream(
-        ['https://example.com/image.jpg'],
-        sessionId,
-        'attachment'
-      ),
-      'should be able to chat with images'
-    );
-  }
+  const ret3 = await chatWithImages(app, token, sessionId, messageId);
+  t.is(
+    ret3,
+    textToEventStream(
+      ['https://example.com/image.jpg'],
+      sessionId,
+      'attachment'
+    ),
+    'should be able to chat with images'
+  );
 
   Sinon.restore();
+});
+
+test('should reject message from different session', async t => {
+  const { app } = t.context;
+
+  const { id } = await createWorkspace(app, token);
+  const sessionId = await createCopilotSession(
+    app,
+    token,
+    id,
+    randomUUID(),
+    promptName
+  );
+  const anotherSessionId = await createCopilotSession(
+    app,
+    token,
+    id,
+    randomUUID(),
+    promptName
+  );
+  const anotherMessageId = await createCopilotMessage(
+    app,
+    token,
+    anotherSessionId
+  );
+  await t.throwsAsync(
+    chatWithText(app, token, sessionId, anotherMessageId),
+    { instanceOf: Error },
+    'should reject message from different session'
+  );
 });
