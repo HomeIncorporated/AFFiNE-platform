@@ -227,3 +227,70 @@ export function textToEventStream(
       .join('\n') + '\n\n'
   );
 }
+
+type ChatMessage = {
+  role: string;
+  content: string;
+  attachments: string[] | null;
+  createdAt: string;
+};
+
+type History = {
+  sessionId: string;
+  tokens: number;
+  action: string | null;
+  createdAt: string;
+  messages: ChatMessage[];
+};
+
+export async function getHistories(
+  app: INestApplication,
+  userToken: string,
+  variables: {
+    workspaceId: string;
+    docId?: string;
+    options?: {
+      sessionId?: string;
+      action?: boolean;
+      limit?: number;
+      skip?: number;
+    };
+  }
+): Promise<History[]> {
+  const res = await request(app.getHttpServer())
+    .post(gql)
+    .auth(userToken, { type: 'bearer' })
+    .set({ 'x-request-id': 'test', 'x-operation-name': 'test' })
+    .send({
+      query: `
+      query getCopilotHistories(
+        $workspaceId: String!
+        $docId: String
+        $options: QueryChatHistoriesInput
+      ) {
+        currentUser {
+          copilot(workspaceId: $workspaceId) {
+            histories(docId: $docId, options: $options) {
+              sessionId
+              tokens
+              action
+              createdAt
+              messages {
+                role
+                content
+                attachments
+                createdAt
+              }
+            }
+          }
+        }
+      }
+    `,
+      variables,
+    })
+    .expect(200);
+
+  handleGraphQLError(res);
+
+  return res.body.data.currentUser?.copilot?.histories || [];
+}

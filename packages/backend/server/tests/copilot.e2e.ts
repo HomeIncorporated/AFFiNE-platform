@@ -23,6 +23,7 @@ import {
   chatWithTextStream,
   createCopilotMessage,
   createCopilotSession,
+  getHistories,
   TestProvider,
   textToEventStream,
 } from './utils/copilot';
@@ -267,4 +268,29 @@ test('should reject request from different user', async t => {
       );
     }
   }
+});
+
+// ==================== history ====================
+
+test.only('should be able to list history', async t => {
+  const { app } = t.context;
+
+  const { id: workspaceId } = await createWorkspace(app, token);
+  const sessionId = await createCopilotSession(
+    app,
+    token,
+    workspaceId,
+    randomUUID(),
+    promptName
+  );
+
+  const messageId = await createCopilotMessage(app, token, sessionId);
+  await chatWithText(app, token, sessionId, messageId);
+
+  const histories = await getHistories(app, token, { workspaceId });
+  t.deepEqual(
+    histories.map(h => h.messages.map(m => m.content)),
+    [['generate text to text']],
+    'should be able to list history'
+  );
 });
