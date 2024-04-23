@@ -232,3 +232,26 @@ test('should reject message from different session', async t => {
     'should reject message from different session'
   );
 });
+
+test('should reject message from different user', async t => {
+  const { app } = t.context;
+
+  const { id } = await createWorkspace(app, token);
+  const sessionId = await createCopilotSession(
+    app,
+    token,
+    id,
+    randomUUID(),
+    promptName
+  );
+
+  const messageId = await createCopilotMessage(app, token, sessionId);
+  {
+    const { token } = await signUp(app, 'a1', 'a1@affine.pro', '123456');
+    await t.throwsAsync(
+      chatWithText(app, token.token, sessionId, messageId),
+      { instanceOf: Error },
+      'should reject message from different user'
+    );
+  }
+});
