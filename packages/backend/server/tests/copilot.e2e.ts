@@ -16,7 +16,13 @@ import {
   registerCopilotProvider,
 } from '../src/plugins/copilot/providers';
 import { CopilotStorage } from '../src/plugins/copilot/storage';
-import { createTestingApp, createWorkspace, signUp } from './utils';
+import {
+  acceptInviteById,
+  createTestingApp,
+  createWorkspace,
+  inviteUser,
+  signUp,
+} from './utils';
 import {
   chatWithImages,
   chatWithText,
@@ -124,6 +130,19 @@ test('should create session correctly', async t => {
         'should not able to create session with cloud workspace that user cannot access'
       );
     });
+
+    const inviteId = await inviteUser(
+      app,
+      token,
+      id,
+      'darksky@affine.pro',
+      'Admin'
+    );
+    await acceptInviteById(app, id, inviteId, false);
+    await assertCreateSession(
+      id,
+      'should able to create session after user have permission'
+    );
   }
 });
 
@@ -272,7 +291,7 @@ test('should reject request from different user', async t => {
 
 // ==================== history ====================
 
-test.only('should be able to list history', async t => {
+test('should be able to list history', async t => {
   const { app } = t.context;
 
   const { id: workspaceId } = await createWorkspace(app, token);
