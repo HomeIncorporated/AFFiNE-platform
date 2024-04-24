@@ -313,3 +313,65 @@ test('should be able to list history', async t => {
     'should be able to list history'
   );
 });
+
+test('should reject request that user have not permission', async t => {
+  const { app } = t.context;
+
+  const {
+    token: { token: anotherToken },
+  } = await signUp(app, 'a1', 'a1@affine.pro', '123456');
+  const { id: workspaceId } = await createWorkspace(app, anotherToken);
+
+  // should reject request that user have not permission
+  {
+    await t.throwsAsync(
+      getHistories(app, token, { workspaceId }),
+      { instanceOf: Error },
+      'should reject request that user have not permission'
+    );
+  }
+
+  // should able to list history after user have permission
+  {
+    const inviteId = await inviteUser(
+      app,
+      anotherToken,
+      workspaceId,
+      'darksky@affine.pro',
+      'Admin'
+    );
+    await acceptInviteById(app, workspaceId, inviteId, false);
+
+    t.deepEqual(
+      await getHistories(app, token, { workspaceId }),
+      [],
+      'should able to list history after user have permission'
+    );
+  }
+
+  {
+    const sessionId = await createCopilotSession(
+      app,
+      anotherToken,
+      workspaceId,
+      randomUUID(),
+      promptName
+    );
+
+    const messageId = await createCopilotMessage(app, anotherToken, sessionId);
+    await chatWithText(app, anotherToken, sessionId, messageId);
+
+    const histories = await getHistories(app, anotherToken, { workspaceId });
+    t.deepEqual(
+      histories.map(h => h.messages.map(m => m.content)),
+      [['generate text to text']],
+      'should able to list history'
+    );
+
+    t.deepEqual(
+      await getHistories(app, token, { workspaceId }),
+      [],
+      'should not list history created by another user'
+    );
+  }
+});
