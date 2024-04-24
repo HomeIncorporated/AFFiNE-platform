@@ -5,7 +5,6 @@ import { ClientOptions, OpenAI } from 'openai';
 import {
   ChatMessageRole,
   CopilotCapability,
-  CopilotImageToImageProvider,
   CopilotImageToTextProvider,
   CopilotProviderType,
   CopilotTextToEmbeddingProvider,
@@ -23,7 +22,6 @@ export class OpenAIProvider
     CopilotTextToTextProvider,
     CopilotTextToEmbeddingProvider,
     CopilotTextToImageProvider,
-    CopilotImageToImageProvider,
     CopilotImageToTextProvider
 {
   static readonly type = CopilotProviderType.OpenAI;
@@ -31,7 +29,6 @@ export class OpenAIProvider
     CopilotCapability.TextToText,
     CopilotCapability.TextToEmbedding,
     CopilotCapability.TextToImage,
-    CopilotCapability.ImageToImage,
     CopilotCapability.ImageToText,
   ];
 

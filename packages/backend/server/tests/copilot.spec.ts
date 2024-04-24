@@ -19,7 +19,7 @@ import {
   CopilotProviderType,
 } from '../src/plugins/copilot/types';
 import { createTestingModule } from './utils';
-import { TestProvider } from './utils/copilot';
+import { MockCopilotTestProvider } from './utils/copilot';
 
 const test = ava as TestFn<{
   auth: AuthService;
@@ -397,11 +397,15 @@ test('should be able to get provider', async t => {
 
 test('should be able to register test provider', async t => {
   const { provider } = t.context;
-  registerCopilotProvider(TestProvider);
+  registerCopilotProvider(MockCopilotTestProvider);
 
   const assertProvider = (cap: CopilotCapability) => {
     const p = provider.getProviderByCapability(cap, 'test');
-    t.is(p?.type, CopilotProviderType.Test, 'should get test provider');
+    t.is(
+      p?.type,
+      CopilotProviderType.Test,
+      `should get test provider with ${cap}`
+    );
   };
 
   assertProvider(CopilotCapability.TextToText);

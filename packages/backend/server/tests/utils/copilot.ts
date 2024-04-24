@@ -9,6 +9,7 @@ import {
 } from '../../src/plugins/copilot/providers/openai';
 import {
   CopilotCapability,
+  CopilotImageToImageProvider,
   CopilotImageToTextProvider,
   CopilotProviderType,
   CopilotTextToEmbeddingProvider,
@@ -19,22 +20,30 @@ import {
 import { gql } from './common';
 import { handleGraphQLError } from './utils';
 
-export class TestProvider
+export class MockCopilotTestProvider
   extends OpenAIProvider
   implements
     CopilotTextToTextProvider,
     CopilotTextToEmbeddingProvider,
     CopilotTextToImageProvider,
+    CopilotImageToImageProvider,
     CopilotImageToTextProvider
 {
   override readonly availableModels = ['test'];
+  static override readonly capabilities = [
+    CopilotCapability.TextToText,
+    CopilotCapability.TextToEmbedding,
+    CopilotCapability.TextToImage,
+    CopilotCapability.ImageToImage,
+    CopilotCapability.ImageToText,
+  ];
 
   override get type(): CopilotProviderType {
     return CopilotProviderType.Test;
   }
 
   override getCapabilities(): CopilotCapability[] {
-    return TestProvider.capabilities;
+    return MockCopilotTestProvider.capabilities;
   }
 
   override isModelAvailable(model: string): boolean {
