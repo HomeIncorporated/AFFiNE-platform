@@ -30,7 +30,7 @@ import {
   createCopilotMessage,
   createCopilotSession,
   getHistories,
-  TestProvider,
+  MockCopilotTestProvider,
   textToEventStream,
 } from './utils/copilot';
 
@@ -75,7 +75,7 @@ test.beforeEach(async t => {
   const user = await signUp(app, 'test', 'darksky@affine.pro', '123456');
   token = user.token.token;
 
-  registerCopilotProvider(TestProvider);
+  registerCopilotProvider(MockCopilotTestProvider);
 
   await prompt.set(promptName, 'test', [
     { role: 'system', content: 'hello {{word}}' },
