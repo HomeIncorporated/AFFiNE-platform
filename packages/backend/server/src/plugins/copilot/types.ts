@@ -15,6 +15,7 @@ export interface CopilotConfig {
   openai: OpenAIClientOptions;
   fal: FalConfig;
   unsplashKey: string;
+  test: never;
 }
 
 export enum AvailableModels {
